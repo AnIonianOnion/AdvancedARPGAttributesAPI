@@ -202,6 +202,7 @@ public class AdvancedARPGAttributesAPI {
         return filtered;
     }
 
+    //forgot to mention this
     /**
      Takes two StatContainers, and a Hashmap where the keys are the tags to replace, and the values are the new replacements.
      Use cases: use summoner's attributes to be included in minion's attributes as well
