@@ -2,6 +2,7 @@ package com.anionianonion.advanced_arpg_attributes_api.api;
 
 
 import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttribute;
+import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttributesMod;
 import com.anionianonion.advanced_arpg_attributes_api.StatContainer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -17,53 +18,53 @@ public class AdvancedARPGAttributesAPI {
     private static final Set<String> validTags = new HashSet<>();
     private static final HashMap<Class<? extends Item>, String> classesOfValidWeaponItemClassesToWeaponTags = new HashMap<>();
 
-    public void registerTag(String newTag) {
+    public static void registerTag(String newTag) {
         if(newTag != null) validTags.add(newTag);
     }
 
-    public Set<String> getValidTags() {
+    public static Set<String> getValidTags() {
         return validTags;
     }
 
-    public Set<String> getValidWeapons() {
+    public static Set<String> getValidWeapons() {
         return classesOfValidWeaponItemClassesToWeaponTags.values()
                 .stream()
                 .filter(tag -> !tag.isEmpty())
                 .collect(Collectors.toSet());
     }
 
-    public void validateAttributes() {
+    public static void validateAttributes() {
         var entries = new HashSet<>(AdvancedARPGAttribute.getAdvancedAttributesRegistry().entrySet());
         for(var attributeEntry : entries) {
             if(!validTags.containsAll(attributeEntry.getValue().getTags())) AdvancedARPGAttribute.getAdvancedAttributesRegistry().remove(attributeEntry.getKey());
         }
     }
 
-    public void regAttribute(ResourceLocation rl, Set<AdvancedARPGAttribute.ModifierType> allowedModifierTypes, Set<String> tags) {
+    public static void regAttribute(ResourceLocation rl, Set<AdvancedARPGAttribute.ModifierType> allowedModifierTypes, Set<String> tags) {
         AdvancedARPGAttribute.regAttribute(rl, allowedModifierTypes, tags);
     }
 
-    public void regAttribute(ResourceLocation rl, Set<String> tags) {
+    public static void regAttribute(ResourceLocation rl, Set<String> tags) {
         AdvancedARPGAttribute.regAttribute(rl, tags);
     }
 
-    public HashMap<ResourceLocation, AdvancedARPGAttribute> getRegistry() {
+    public static HashMap<ResourceLocation, AdvancedARPGAttribute> getRegistry() {
         return AdvancedARPGAttribute.getAdvancedAttributesRegistry();
     }
 
-    public void addPlayerExecutedFunctionToAttribute(Attribute a, BiConsumer<Player, Float> function) {
+    public static void addPlayerExecutedFunctionToAttribute(Attribute a, BiConsumer<Player, Float> function) {
         AdvancedARPGAttribute.getAttributeCapFunctions().put(a, function);
     }
 
-    public void registerWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
+    public static void registerWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
         classesOfValidWeaponItemClassesToWeaponTags.put(itemClass, tag);
     }
 
-    public HashMap<Class<? extends Item>, String> getClassesOfWeaponItemsToTag() {
+    public static HashMap<Class<? extends Item>, String> getClassesOfWeaponItemsToTag() {
         return classesOfValidWeaponItemClassesToWeaponTags;
     }
 
-    public float getResult(StatContainer statContainer, Set<ResourceLocation> filteredAttributeIds) {
+    public static float getResult(StatContainer statContainer, Set<ResourceLocation> filteredAttributeIds) {
         float add = 0;
         float increase = 0;
         float more = 1;
@@ -102,7 +103,7 @@ public class AdvancedARPGAttributesAPI {
 
     }
 
-    public float getResultOfSingleAttribute(StatContainer statContainer, ResourceLocation attributeId) {
+    public static float getResultOfSingleAttribute(StatContainer statContainer, ResourceLocation attributeId) {
         float add = 0;
         float increase = 0;
         float more = 1;
@@ -140,7 +141,7 @@ public class AdvancedARPGAttributesAPI {
         return Math.min(result, cap);
     }
 
-    public float[] getData(StatContainer statContainer, Set<ResourceLocation> filteredAttributeIds) {
+    public static float[] getData(StatContainer statContainer, Set<ResourceLocation> filteredAttributeIds) {
         float[] data = new float[3];
 
         float add = 0;
@@ -182,11 +183,11 @@ public class AdvancedARPGAttributesAPI {
 
     }
 
-    public Set<ResourceLocation> getFilteredAttributes(String... tags) {
+    public static Set<ResourceLocation> getFilteredAttributes(String... tags) {
         return getFilteredAttributes(Set.of(tags));
     }
 
-    public Set<ResourceLocation> getFilteredAttributes(Set<String> tags) {
+    public static Set<ResourceLocation> getFilteredAttributes(Set<String> tags) {
         var attributeEntries = AdvancedARPGAttribute.getAdvancedAttributesRegistry().entrySet();
         Set<ResourceLocation> filtered = new HashSet<>();
 
@@ -200,4 +201,119 @@ public class AdvancedARPGAttributesAPI {
         }
         return filtered;
     }
+
+    /**
+     Takes two StatContainers, and a Hashmap where the keys are the tags to replace, and the values are the new replacements.
+     Use cases: use summoner's attributes to be included in minion's attributes as well
+     @return a newStatContainer containing the original StatContainer a's attribute resource locations and modifiers; and the attribute resource locations and modifiers from StatContainer b that have a conversion attribute that matches the tags in tagToReplaceToNewReplacementTagMap.
+     */
+    public static StatContainer getNewStatContainerByRemappingBtoA(StatContainer a, StatContainer b, HashMap<String, String> tagToReplaceToNewReplacementTagMap) {
+
+        StatContainer resultStatContainer = new StatContainer();
+
+        ///adds everything in StatContainer a to new stat container that we will return
+        for(var addedEntry : a.getAddedModifiers().entries()) {
+            var attributeId = addedEntry.getKey().toString();
+            var modifier = addedEntry.getValue();
+            resultStatContainer.addModifier(modifier, attributeId);
+        }
+
+        for(var increasedEntry : a.getIncreaseModifiers().entries()) {
+            var attributeId = increasedEntry.getKey().toString();
+            var modifier = increasedEntry.getValue();
+            resultStatContainer.addModifier(modifier, attributeId);
+        }
+
+        for(var moreEntry : a.getMoreModifiers().entries()) {
+            var attributeId = moreEntry.getKey().toString();
+            var modifier = moreEntry.getValue();
+            resultStatContainer.addModifier(modifier, attributeId);
+        }
+
+        ///moving on to StatContainer b
+        for(var entry : tagToReplaceToNewReplacementTagMap.entrySet()) {
+            var attributeTagToReplace = entry.getKey();
+            var replacement = entry.getValue();
+
+            for(var addedEntry : b.getAddedModifiers().entries()) {
+                var attributeRL = addedEntry.getKey();
+                var modifier = addedEntry.getValue();
+
+                var advancedAPGAttribute = AdvancedARPGAttribute.get(attributeRL);
+                if(advancedAPGAttribute == null) continue;
+
+                if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
+
+                var newTags = new HashSet<>(advancedAPGAttribute.getTags());
+                newTags.remove(attributeTagToReplace);
+                newTags.add(replacement);
+
+                var replacementAttributeRL = (ResourceLocation) AdvancedARPGAttributesAPI.getFilteredAttributes(newTags).toArray()[0];
+                var replacementAttributeId = replacementAttributeRL.toString();
+
+                resultStatContainer.addModifier(modifier, replacementAttributeId);
+
+            }
+
+            for(var increasedEntry : b.getIncreaseModifiers().entries()) {
+                var attributeRL = increasedEntry.getKey();
+                var modifier = increasedEntry.getValue();
+
+                var advancedAPGAttribute = AdvancedARPGAttribute.get(attributeRL);
+                if(advancedAPGAttribute == null) continue;
+
+                if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
+
+                var newTags = new HashSet<>(advancedAPGAttribute.getTags());
+                newTags.remove(attributeTagToReplace);
+                newTags.add(replacement);
+
+                var replacementAttributeRL = (ResourceLocation) AdvancedARPGAttributesAPI.getFilteredAttributes(newTags).toArray()[0];
+                var replacementAttributeId = replacementAttributeRL.toString();
+
+                resultStatContainer.addModifier(modifier, replacementAttributeId);
+
+            }
+
+            for(var moreEntry : b.getMoreModifiers().entries()) {
+                var attributeRL = moreEntry.getKey();
+                var modifier = moreEntry.getValue();
+
+                var advancedAPGAttribute = AdvancedARPGAttribute.get(attributeRL);
+                if(advancedAPGAttribute == null) continue;
+
+                if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
+
+                var newTags = new HashSet<>(advancedAPGAttribute.getTags());
+                newTags.remove(attributeTagToReplace);
+                newTags.add(replacement);
+
+                var replacementAttributeRL = (ResourceLocation) AdvancedARPGAttributesAPI.getFilteredAttributes(newTags).toArray()[0];
+                var replacementAttributeId = replacementAttributeRL.toString();
+
+                resultStatContainer.addModifier(modifier, replacementAttributeId);
+
+            }
+
+        }
+
+        logDataFromStatContainer(resultStatContainer);
+
+        return resultStatContainer;
+    }
+
+    public static void logDataFromStatContainer(StatContainer statContainer) {
+        for(var key : statContainer.getAddedModifiers().keySet()) {
+            AdvancedARPGAttributesMod.LOGGER.info(key + " "  + statContainer.getAddedModifiers().get(key).toString());
+        }
+
+        for(var key : statContainer.getIncreaseModifiers().keySet()) {
+            AdvancedARPGAttributesMod.LOGGER.info(key + " " + statContainer.getIncreaseModifiers().get(key).toString());
+        }
+
+        for(var key : statContainer.getMoreModifiers().keySet()) {
+            AdvancedARPGAttributesMod.LOGGER.info(key + " " + statContainer.getMoreModifiers().get(key).toString());
+        }
+    }
+
 }

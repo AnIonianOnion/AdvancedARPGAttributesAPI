@@ -98,8 +98,6 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
 
     public void readdModifiersFromPlayer(ServerPlayer player) {
 
-        AdvancedARPGAttributesAPI api = new AdvancedARPGAttributesAPI();
-
         //the only way to get all player attributes from the player, which is saved as a tag
         var attributesTag = player.getAttributes().save();
 
@@ -114,7 +112,7 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
             //If not valid, skip.
             ResourceLocation rl = ResourceLocation.tryParse(attributeId);
             if(rl == null) continue;
-            if(!api.getRegistry().containsKey(rl)) continue;
+            if(!AdvancedARPGAttributesAPI.getRegistry().containsKey(rl)) continue;
 
             Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(rl);
             if(attribute == null) continue;
@@ -281,9 +279,8 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
     /**
      * This method loops through the resource-location-to-locked-attribute-value map, and "locks" all the player's attributes at those values,
      * by setting the base value of each attribute to that value, and removing all other modifiers. It also applies special functions if the attribute for the resource location that exists in attributeCaps also exists in attributeCapFunctions.
-     * *Related*: For special functionalities, like locking a player's health at 1 hp, you must use <code>AdvancedARPGAttributesAPI#addPlayerExecutedFunctionToAttribute</code>
-     * ((an instance of AdvancedARPGAttributesAPI).addPlayerExecutedFunctionToAttribute()).
-     *  For example: <code>api.addPlayerExecutedFunctionToAttribute(Attributes.MAX_HEALTH, (player, lockedValue) -> { if(player.isAlive()) { player.setHealth(lockedValue); }})</code>
+     * *Related*: For special functionalities, like locking a player's health at 1 hp, you must use <code>AdvancedARPGAttributesAPI.addPlayerExecutedFunctionToAttribute</code>
+     *  For example: <code>AdvancedARPGAttributesAPI.addPlayerExecutedFunctionToAttribute(Attributes.MAX_HEALTH, (player, lockedValue) -> { if(player.isAlive()) { player.setHealth(lockedValue); }})</code>
      */
     public static void applyAttributeLocks(ServerPlayer player, HashMap<ResourceLocation, Float> attributeCaps) {
         for(var attributeCap : attributeCaps.entrySet()) {

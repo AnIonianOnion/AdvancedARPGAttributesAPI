@@ -33,8 +33,6 @@ public class SeeModifiersCommand {
 
                         player.getCapability(StatContainerCapability.INSTANCE).ifPresent(cap -> {
 
-                            AdvancedARPGAttributesAPI api = new AdvancedARPGAttributesAPI();
-
                             for(var attributeTag : attributesTag) {
 
                                 CompoundTag compoundTag = (CompoundTag) attributeTag;
@@ -42,7 +40,7 @@ public class SeeModifiersCommand {
 
                                 ResourceLocation rl = ResourceLocation.tryParse(attributeId);
                                 if(rl == null) continue;
-                                if(!api.getRegistry().containsKey(rl)) continue;
+                                if(!AdvancedARPGAttributesAPI.getRegistry().containsKey(rl)) continue;
 
                                 Attribute attribute = ModAttributes.getAttribute(attributeId);
                                 var modifiers = Objects.requireNonNull(player.getAttribute(attribute)).getModifiers();
