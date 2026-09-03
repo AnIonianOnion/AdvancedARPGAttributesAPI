@@ -1,13 +1,8 @@
 package com.anionianonion.advanced_arpg_attributes_api;
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.player.Player;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 public class AdvancedARPGAttribute {
@@ -18,8 +13,6 @@ public class AdvancedARPGAttribute {
     private Set<String> tags;
     private float baseValue;
 
-    private static final HashMap<ResourceLocation, AdvancedARPGAttribute> advancedAttributesRegistry = new HashMap<>();
-    private static final HashMap<Attribute, BiConsumer<Player, Float>> attributeCapFunctions = new HashMap<>();
     /**
      Constructor which specifies name, and customizing allowedModifier types, as well as automatic registration.
      */
@@ -28,26 +21,16 @@ public class AdvancedARPGAttribute {
         this.allowedModifierTypes = allowedModifierTypes;
         this.tags = tags;
 
-        if(!advancedAttributesRegistry.containsKey(rl)) advancedAttributesRegistry.put(rl, this);
+        var registry = AdvancedARPGAttributesRegistry.get();
+        if(!registry.containsKey(rl)) registry.put(rl, this);
     }
 
     public AdvancedARPGAttribute(ResourceLocation rl, Set<String> tags) {
         this.rl = rl;
         this.tags = tags;
         this.allowedModifierTypes = Set.of(ModifierType.ADDED, ModifierType.INCREASED, ModifierType.MORE);
-        if(!advancedAttributesRegistry.containsKey(rl)) advancedAttributesRegistry.put(rl, this);
-    }
-
-    public static void regAttribute(ResourceLocation rl, Set<ModifierType> allowedModifierTypes, Set<String> tags) {
-        if(!advancedAttributesRegistry.containsKey(rl)) advancedAttributesRegistry.put(rl, new AdvancedARPGAttribute(rl, allowedModifierTypes, tags));
-    }
-
-    public static void regAttribute(ResourceLocation rl, Set<String> tags) {
-        if(!advancedAttributesRegistry.containsKey(rl)) advancedAttributesRegistry.put(rl, new AdvancedARPGAttribute(rl, tags));
-    }
-
-    public static HashMap<ResourceLocation, AdvancedARPGAttribute> getAdvancedAttributesRegistry() {
-        return advancedAttributesRegistry;
+        var registry = AdvancedARPGAttributesRegistry.get();
+        if(!registry.containsKey(rl)) registry.put(rl, this);
     }
 
     public Set<ModifierType> getAllowedModifierTypes() {
@@ -75,7 +58,7 @@ public class AdvancedARPGAttribute {
     }
 
     public static AdvancedARPGAttribute get(ResourceLocation id) {
-        return advancedAttributesRegistry.get(id);
+        return AdvancedARPGAttributesRegistry.get().get(id);
     }
 
     public float getBaseValue() {
@@ -88,9 +71,5 @@ public class AdvancedARPGAttribute {
 
     public void setBaseValue(Supplier<Float> baseValueSupplier) {
         this.baseValue = baseValueSupplier.get();
-    }
-
-    public static HashMap<Attribute, BiConsumer<Player, Float>> getAttributeCapFunctions() {
-        return attributeCapFunctions;
     }
 }

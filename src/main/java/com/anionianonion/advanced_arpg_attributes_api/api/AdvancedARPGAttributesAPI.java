@@ -3,6 +3,7 @@ package com.anionianonion.advanced_arpg_attributes_api.api;
 
 import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttribute;
 import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttributesMod;
+import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttributesRegistry;
 import com.anionianonion.advanced_arpg_attributes_api.StatContainer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -34,26 +35,26 @@ public class AdvancedARPGAttributesAPI {
     }
 
     public static void validateAttributes() {
-        var entries = new HashSet<>(AdvancedARPGAttribute.getAdvancedAttributesRegistry().entrySet());
+        var entries = new HashSet<>(AdvancedARPGAttributesRegistry.get().entrySet());
         for(var attributeEntry : entries) {
-            if(!validTags.containsAll(attributeEntry.getValue().getTags())) AdvancedARPGAttribute.getAdvancedAttributesRegistry().remove(attributeEntry.getKey());
+            if(!validTags.containsAll(attributeEntry.getValue().getTags())) AdvancedARPGAttributesRegistry.get().remove(attributeEntry.getKey());
         }
     }
 
     public static void regAttribute(ResourceLocation rl, Set<AdvancedARPGAttribute.ModifierType> allowedModifierTypes, Set<String> tags) {
-        AdvancedARPGAttribute.regAttribute(rl, allowedModifierTypes, tags);
+        AdvancedARPGAttributesRegistry.regAttribute(rl, allowedModifierTypes, tags);
     }
 
     public static void regAttribute(ResourceLocation rl, Set<String> tags) {
-        AdvancedARPGAttribute.regAttribute(rl, tags);
+        AdvancedARPGAttributesRegistry.regAttribute(rl, tags);
     }
 
     public static HashMap<ResourceLocation, AdvancedARPGAttribute> getRegistry() {
-        return AdvancedARPGAttribute.getAdvancedAttributesRegistry();
+        return AdvancedARPGAttributesRegistry.get();
     }
 
     public static void addPlayerExecutedFunctionToAttribute(Attribute a, BiConsumer<Player, Float> function) {
-        AdvancedARPGAttribute.getAttributeCapFunctions().put(a, function);
+        AdvancedARPGAttributesRegistry.getAttributeCapFunctions().put(a, function);
     }
 
     public static void registerWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
@@ -188,7 +189,7 @@ public class AdvancedARPGAttributesAPI {
     }
 
     public static Set<ResourceLocation> getFilteredAttributes(Set<String> tags) {
-        var attributeEntries = AdvancedARPGAttribute.getAdvancedAttributesRegistry().entrySet();
+        var attributeEntries = AdvancedARPGAttributesRegistry.get().entrySet();
         Set<ResourceLocation> filtered = new HashSet<>();
 
         for(var attributeEntry : attributeEntries) {

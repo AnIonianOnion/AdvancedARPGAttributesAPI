@@ -291,8 +291,8 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
             Objects.requireNonNull(player.getAttribute(a)).removeModifiers();
             Objects.requireNonNull(player.getAttribute(a)).setBaseValue(attributeCap.getValue());
 
-            if(AdvancedARPGAttribute.getAttributeCapFunctions().containsKey(a)) {
-                BiConsumer<Player, Float> function = AdvancedARPGAttribute.getAttributeCapFunctions().get(a);
+            if(AdvancedARPGAttributesRegistry.getAttributeCapFunctions().containsKey(a)) {
+                BiConsumer<Player, Float> function = AdvancedARPGAttributesRegistry.getAttributeCapFunctions().get(a);
                 function.accept(player, attributeCap.getValue());
             }
         }
