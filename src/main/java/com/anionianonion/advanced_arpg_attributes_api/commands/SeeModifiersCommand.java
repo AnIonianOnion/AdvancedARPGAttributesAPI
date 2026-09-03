@@ -2,7 +2,6 @@ package com.anionianonion.advanced_arpg_attributes_api.commands;
 
 import com.anionianonion.advanced_arpg_attributes_api.api.AdvancedARPGAttributesAPI;
 import com.anionianonion.advanced_arpg_attributes_api.capability.StatContainerCapability;
-import com.anionianonion.elementals_api.ModAttributes;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -12,6 +11,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +42,9 @@ public class SeeModifiersCommand {
                                 if(rl == null) continue;
                                 if(!AdvancedARPGAttributesAPI.getRegistry().containsKey(rl)) continue;
 
-                                Attribute attribute = ModAttributes.getAttribute(attributeId);
+                                Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(rl);
+                                if(attribute == null) continue;
+
                                 var modifiers = Objects.requireNonNull(player.getAttribute(attribute)).getModifiers();
 
                                 player.sendSystemMessage(Component.literal(modifiers.toString()));
