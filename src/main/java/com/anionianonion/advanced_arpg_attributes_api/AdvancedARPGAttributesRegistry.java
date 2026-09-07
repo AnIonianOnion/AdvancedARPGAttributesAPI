@@ -26,6 +26,10 @@ public class AdvancedARPGAttributesRegistry {
         return advancedAttributesRegistry;
     }
 
+    public static AdvancedARPGAttribute get(ResourceLocation id) {
+        return advancedAttributesRegistry.get(id);
+    }
+
     public static HashMap<Attribute, BiConsumer<Player, Float>> getAttributeCapFunctions() {
         return attributeCapFunctions;
     }

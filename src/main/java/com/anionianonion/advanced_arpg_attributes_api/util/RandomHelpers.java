@@ -2,7 +2,10 @@ package com.anionianonion.advanced_arpg_attributes_api.util;
 
 import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttribute;
 import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttributesMod;
+import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttributesRegistry;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
 
 public class RandomHelpers {
 
@@ -10,20 +13,13 @@ public class RandomHelpers {
         ResourceLocation rl = ResourceLocation.tryParse(attributeId);
         if(rl == null) return null;
 
-        return AdvancedARPGAttribute.get(rl);
+        var minecraftAttribute = ForgeRegistries.ATTRIBUTES.getValue(rl);
+        if(minecraftAttribute == null) return null;
+
+        return AdvancedARPGAttributesRegistry.get(rl);
     }
 
-    public static ResourceLocation getValidResourceLocationOfValidAAAttribute(String attributeId) {
-        ResourceLocation rl = ResourceLocation.tryParse(attributeId);
-        if(rl == null) {
-            AdvancedARPGAttributesMod.LOGGER.info("cannot parse when trying to getValidResourceLocationOfValidAAAttribute " + attributeId);
-            return null;
-        }
-
-        if(AdvancedARPGAttribute.get(rl) == null) {
-            AdvancedARPGAttributesMod.LOGGER.info("in getValidResourceLocationOfValidAAAttribute, AAAttribute.get(rl) is null for " + attributeId);
-            return null;
-        }
-        return rl;
+    public static ResourceLocation getResourceLocationOfValidAAAttribute(@NotNull AdvancedARPGAttribute attribute) {
+        return attribute.getRl();
     }
 }

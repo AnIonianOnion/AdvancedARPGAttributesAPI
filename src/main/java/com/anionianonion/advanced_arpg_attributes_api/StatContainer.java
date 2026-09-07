@@ -60,8 +60,8 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
         ResourceLocation rl = ResourceLocation.tryParse(attributeId);
         if(rl == null) return;
 
-        var attribute = AdvancedARPGAttribute.get(rl);
-        if(attribute == null) return;
+        var aaattribute = AdvancedARPGAttributesRegistry.get(rl);
+        if(aaattribute == null) return;
 
         var minecraftAttribute = ForgeRegistries.ATTRIBUTES.getValue(rl);
         if(minecraftAttribute == null) return;
@@ -72,7 +72,7 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
             case MULTIPLY_TOTAL -> ModifierType.MORE;
         };
 
-        if(!attribute.getAllowedModifierTypes().contains(modifierType)) return;
+        if(!aaattribute.getAllowedModifierTypes().contains(modifierType)) return;
 
         var multimap = switch(attributeModifier.getOperation()) {
             case ADDITION -> addedModifiers;
@@ -137,7 +137,10 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
      Can be used for implementing features like Chaos Inoculation from PoE.
      */
     public void lockAttribute(String attributeId, float amount) {
-        ResourceLocation rl = RandomHelpers.getValidResourceLocationOfValidAAAttribute(attributeId);
+        AdvancedARPGAttribute attribute = RandomHelpers.getValidAAAttribute(attributeId);
+        if(attribute == null) return;
+
+        ResourceLocation rl = RandomHelpers.getResourceLocationOfValidAAAttribute(attribute);
 
         if(rl == null) {
             AdvancedARPGAttributesMod.LOGGER.info(String.format("resource location is null for %s when trying to set the attribute cap", attributeId));
@@ -147,7 +150,10 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
     }
 
     public Float getLockedAttributeValue(String attributeId) {
-        ResourceLocation rl = RandomHelpers.getValidResourceLocationOfValidAAAttribute(attributeId);
+        AdvancedARPGAttribute attribute = RandomHelpers.getValidAAAttribute(attributeId);
+        if(attribute == null) return null;
+
+        ResourceLocation rl = RandomHelpers.getResourceLocationOfValidAAAttribute(attribute);
         return getLockedAttributeValue(rl);
     }
 
@@ -157,7 +163,11 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
     }
 
     public void unlockAttribute(String attributeId) {
-        ResourceLocation rl = RandomHelpers.getValidResourceLocationOfValidAAAttribute(attributeId);
+        AdvancedARPGAttribute attribute = RandomHelpers.getValidAAAttribute(attributeId);
+        if(attribute == null) return;
+
+        ResourceLocation rl = RandomHelpers.getResourceLocationOfValidAAAttribute(attribute);
+        
         if(attributeCaps.containsKey(rl) && attributeCaps.get(rl) != null) {
             AdvancedARPGAttributesMod.LOGGER.info(String.format("Found key: %s. Removing cap of %s", attributeId, attributeCaps.get(rl)));
         }

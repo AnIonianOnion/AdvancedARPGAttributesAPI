@@ -17,7 +17,8 @@ import java.util.stream.Collectors;
 public class AdvancedARPGAttributesAPI {
 
     private static final Set<String> validTags = new HashSet<>();
-    private static final HashMap<Class<? extends Item>, String> classesOfValidWeaponItemClassesToWeaponTags = new HashMap<>();
+    private static final HashMap<Class<? extends Item>, String> classesOfValidMeleeWeaponItemClassesToWeaponTags = new HashMap<>();
+    private static final HashMap<Class<? extends Item>, String> classesOfValidRangedWeaponItemClassesToWeaponTags = new HashMap<>();
 
     public static void registerTag(String newTag) {
         if(newTag != null) validTags.add(newTag);
@@ -28,10 +29,23 @@ public class AdvancedARPGAttributesAPI {
     }
 
     public static Set<String> getValidWeapons() {
-        return classesOfValidWeaponItemClassesToWeaponTags.values()
+        var meleeWeapons = classesOfValidMeleeWeaponItemClassesToWeaponTags
+                .values()
                 .stream()
                 .filter(tag -> !tag.isEmpty())
                 .collect(Collectors.toSet());
+
+        var rangedWeapons = classesOfValidRangedWeaponItemClassesToWeaponTags.
+                values().
+                stream()
+                .filter(tag -> !tag.isEmpty())
+                .collect(Collectors.toSet());
+
+        var validWeapons = new HashSet<String>();
+        validWeapons.addAll(meleeWeapons);
+        validWeapons.addAll(rangedWeapons);
+
+        return validWeapons;
     }
 
     public static void validateAttributes() {
@@ -57,13 +71,22 @@ public class AdvancedARPGAttributesAPI {
         AdvancedARPGAttributesRegistry.getAttributeCapFunctions().put(a, function);
     }
 
-    public static void registerWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
-        classesOfValidWeaponItemClassesToWeaponTags.put(itemClass, tag);
+    public static void registerMeleeWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
+        classesOfValidMeleeWeaponItemClassesToWeaponTags.put(itemClass, tag);
     }
 
-    public static HashMap<Class<? extends Item>, String> getClassesOfWeaponItemsToTag() {
-        return classesOfValidWeaponItemClassesToWeaponTags;
+    public static HashMap<Class<? extends Item>, String> getClassesOfMeleeWeaponItemsToTag() {
+        return classesOfValidMeleeWeaponItemClassesToWeaponTags;
     }
+
+    public static void registerRangedWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
+        classesOfValidRangedWeaponItemClassesToWeaponTags.put(itemClass, tag);
+    }
+
+    public static HashMap<Class<? extends Item>, String> getClassesOfRangedWeaponItemsToTag() {
+        return classesOfValidRangedWeaponItemClassesToWeaponTags;
+    }
+
 
     public static float getResult(StatContainer statContainer, Set<ResourceLocation> filteredAttributeIds) {
         float add = 0;
@@ -71,10 +94,10 @@ public class AdvancedARPGAttributesAPI {
         float more = 1;
 
         for(var attributeId : filteredAttributeIds) {
-            var allowedMods = AdvancedARPGAttribute.get(attributeId).getAllowedModifierTypes();
+            var allowedMods = AdvancedARPGAttributesRegistry.get(attributeId).getAllowedModifierTypes();
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.ADDED)) {
-                add += AdvancedARPGAttribute.get(attributeId).getBaseValue();
+                add += AdvancedARPGAttributesRegistry.get(attributeId).getBaseValue();
 
                 for(var modifier : statContainer.getAddedModifiers().get(attributeId)) {
                     assert modifier != null;
@@ -109,10 +132,10 @@ public class AdvancedARPGAttributesAPI {
         float increase = 0;
         float more = 1;
 
-        var allowedMods = AdvancedARPGAttribute.get(attributeId).getAllowedModifierTypes();
+        var allowedMods = AdvancedARPGAttributesRegistry.get(attributeId).getAllowedModifierTypes();
 
         if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.ADDED)) {
-            add += AdvancedARPGAttribute.get(attributeId).getBaseValue();
+            add += AdvancedARPGAttributesRegistry.get(attributeId).getBaseValue();
 
             for(var modifier : statContainer.getAddedModifiers().get(attributeId)) {
                 assert modifier != null;
@@ -150,9 +173,11 @@ public class AdvancedARPGAttributesAPI {
         float more = 1;
 
         for(var attributeId : filteredAttributeIds) {
-            var allowedMods = AdvancedARPGAttribute.get(attributeId).getAllowedModifierTypes();
+            var allowedMods = AdvancedARPGAttributesRegistry.get(attributeId).getAllowedModifierTypes();
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.ADDED)) {
+                add += AdvancedARPGAttributesRegistry.get(attributeId).getBaseValue();
+                
                 for(var modifier : statContainer.getAddedModifiers().get(attributeId)) {
                     assert modifier != null;
                     float amount = (float) modifier.getAmount();
@@ -241,7 +266,7 @@ public class AdvancedARPGAttributesAPI {
                 var attributeRL = addedEntry.getKey();
                 var modifier = addedEntry.getValue();
 
-                var advancedAPGAttribute = AdvancedARPGAttribute.get(attributeRL);
+                var advancedAPGAttribute = AdvancedARPGAttributesRegistry.get(attributeRL);
                 if(advancedAPGAttribute == null) continue;
 
                 if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
@@ -261,7 +286,7 @@ public class AdvancedARPGAttributesAPI {
                 var attributeRL = increasedEntry.getKey();
                 var modifier = increasedEntry.getValue();
 
-                var advancedAPGAttribute = AdvancedARPGAttribute.get(attributeRL);
+                var advancedAPGAttribute = AdvancedARPGAttributesRegistry.get(attributeRL);
                 if(advancedAPGAttribute == null) continue;
 
                 if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
@@ -281,7 +306,7 @@ public class AdvancedARPGAttributesAPI {
                 var attributeRL = moreEntry.getKey();
                 var modifier = moreEntry.getValue();
 
-                var advancedAPGAttribute = AdvancedARPGAttribute.get(attributeRL);
+                var advancedAPGAttribute = AdvancedARPGAttributesRegistry.get(attributeRL);
                 if(advancedAPGAttribute == null) continue;
 
                 if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;

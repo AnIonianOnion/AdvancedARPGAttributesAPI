@@ -57,10 +57,6 @@ public class AdvancedARPGAttribute {
         this.tags = tags;
     }
 
-    public static AdvancedARPGAttribute get(ResourceLocation id) {
-        return AdvancedARPGAttributesRegistry.get().get(id);
-    }
-
     public float getBaseValue() {
         return baseValue;
     }
