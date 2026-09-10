@@ -13,7 +13,6 @@ public class AdvancedARPGAttributesRegistry {
     private static final HashMap<ResourceLocation, AdvancedARPGAttribute> advancedAttributesRegistry = new HashMap<>();
     private static final HashMap<Attribute, BiConsumer<Player, Float>> attributeCapFunctions = new HashMap<>();
 
-
     public static void regAttribute(ResourceLocation rl, Set<AdvancedARPGAttribute.ModifierType> allowedModifierTypes, Set<String> tags) {
         if(!advancedAttributesRegistry.containsKey(rl)) advancedAttributesRegistry.put(rl, new AdvancedARPGAttribute(rl, allowedModifierTypes, tags));
     }

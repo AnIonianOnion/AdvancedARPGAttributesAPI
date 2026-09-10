@@ -5,10 +5,15 @@ import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttribute;
 import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttributesMod;
 import com.anionianonion.advanced_arpg_attributes_api.AdvancedARPGAttributesRegistry;
 import com.anionianonion.advanced_arpg_attributes_api.StatContainer;
+import com.anionianonion.advanced_arpg_attributes_api.capability.StatContainerCapability;
+import com.google.common.collect.Multimap;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -88,18 +93,28 @@ public class AdvancedARPGAttributesAPI {
     }
 
 
-    public static float getResult(StatContainer statContainer, Set<ResourceLocation> filteredAttributeIds) {
+    public static float getResult(LivingEntity livingEntity, Set<ResourceLocation> filteredAttributeRLs) {
         float add = 0;
         float increase = 0;
         float more = 1;
 
-        for(var attributeId : filteredAttributeIds) {
-            var allowedMods = AdvancedARPGAttributesRegistry.get(attributeId).getAllowedModifierTypes();
+        StatContainer statContainer = livingEntity.getCapability(StatContainerCapability.INSTANCE).resolve().orElse(null);
+        if(statContainer == null) return 0;
+
+        for(var attributeRL : filteredAttributeRLs) {
+            var allowedMods = AdvancedARPGAttributesRegistry.get(attributeRL).getAllowedModifierTypes();
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.ADDED)) {
-                add += AdvancedARPGAttributesRegistry.get(attributeId).getBaseValue();
 
-                for(var modifier : statContainer.getAddedModifiers().get(attributeId)) {
+                var attribute = ForgeRegistries.ATTRIBUTES.getValue(attributeRL);
+                if(AdvancedARPGAttributesRegistry.get(attributeRL).isInheritingBase() && attribute != null) {
+                    add += (float) livingEntity.getAttribute(attribute).getBaseValue();
+                }
+                else {
+                    add += AdvancedARPGAttributesRegistry.get(attributeRL).getBaseValue();
+                }
+
+                for(var modifier : statContainer.getAddedModifiers().get(attributeRL)) {
                     assert modifier != null;
                     float amount = (float) modifier.getAmount();
                     add += amount;
@@ -107,7 +122,7 @@ public class AdvancedARPGAttributesAPI {
             }
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.INCREASED)) {
-                for(var modifier : statContainer.getIncreaseModifiers().get(attributeId)) {
+                for(var modifier : statContainer.getIncreaseModifiers().get(attributeRL)) {
                     assert modifier != null;
                     float amount = (float) modifier.getAmount();
                     increase += amount;
@@ -115,7 +130,7 @@ public class AdvancedARPGAttributesAPI {
             }
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.MORE)) {
-                for(var modifier : statContainer.getMoreModifiers().get(attributeId)) {
+                for(var modifier : statContainer.getMoreModifiers().get(attributeRL)) {
                     assert modifier != null;
                     float amount = (float) modifier.getAmount();
                     more *= (1 + amount);
@@ -127,25 +142,33 @@ public class AdvancedARPGAttributesAPI {
 
     }
 
-    public static float getResultOfSingleAttribute(StatContainer statContainer, ResourceLocation attributeId) {
+    public static float getResultOfSingleAttribute(LivingEntity livingEntity, ResourceLocation attributeRL) {
         float add = 0;
         float increase = 0;
         float more = 1;
 
-        var allowedMods = AdvancedARPGAttributesRegistry.get(attributeId).getAllowedModifierTypes();
+        StatContainer statContainer = livingEntity.getCapability(StatContainerCapability.INSTANCE).resolve().orElse(null);
+        if(statContainer == null) return 0;
+
+        var allowedMods = AdvancedARPGAttributesRegistry.get(attributeRL).getAllowedModifierTypes();
 
         if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.ADDED)) {
-            add += AdvancedARPGAttributesRegistry.get(attributeId).getBaseValue();
+            var attribute = ForgeRegistries.ATTRIBUTES.getValue(attributeRL);
+            if(AdvancedARPGAttributesRegistry.get(attributeRL).isInheritingBase() && attribute != null) {
+                add += (float) livingEntity.getAttribute(attribute).getBaseValue();
+            }
+            else {
+                add += AdvancedARPGAttributesRegistry.get(attributeRL).getBaseValue();
+            }
 
-            for(var modifier : statContainer.getAddedModifiers().get(attributeId)) {
+            for(var modifier : statContainer.getAddedModifiers().get(attributeRL)) {
                 assert modifier != null;
                 float amount = (float) modifier.getAmount();
-                add += amount;
             }
         }
 
         if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.INCREASED)) {
-            for(var modifier : statContainer.getIncreaseModifiers().get(attributeId)) {
+            for(var modifier : statContainer.getIncreaseModifiers().get(attributeRL)) {
                 assert modifier != null;
                 float amount = (float) modifier.getAmount();
                 increase += amount;
@@ -153,32 +176,47 @@ public class AdvancedARPGAttributesAPI {
         }
 
         if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.MORE)) {
-            for(var modifier : statContainer.getMoreModifiers().get(attributeId)) {
+            for(var modifier : statContainer.getMoreModifiers().get(attributeRL)) {
                 assert modifier != null;
                 float amount = (float) modifier.getAmount();
                 more *= (1 + amount);
             }
         }
         var result = add * (1 + increase) * more;
-        var cap = statContainer.getLockedAttributeValue(attributeId);
+        var cap = statContainer.getLockedAttributeValue(attributeRL);
         if(cap == null) return result;
         return Math.min(result, cap);
     }
 
-    public static float[] getData(StatContainer statContainer, Set<ResourceLocation> filteredAttributeIds) {
+    public static float[] getData(LivingEntity livingEntity, Set<ResourceLocation> filteredAttributeRLs) {
         float[] data = new float[3];
 
         float add = 0;
         float increase = 0;
         float more = 1;
 
-        for(var attributeId : filteredAttributeIds) {
-            var allowedMods = AdvancedARPGAttributesRegistry.get(attributeId).getAllowedModifierTypes();
+        StatContainer statContainer = livingEntity.getCapability(StatContainerCapability.INSTANCE).resolve().orElse(null);
+        if(statContainer == null) {
+            data[0] = add;
+            data[1] = increase;
+            data[2] = more - 1;
+            return data;
+        }
+
+
+        for(var attributeRL : filteredAttributeRLs) {
+            var allowedMods = AdvancedARPGAttributesRegistry.get(attributeRL).getAllowedModifierTypes();
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.ADDED)) {
-                add += AdvancedARPGAttributesRegistry.get(attributeId).getBaseValue();
+                var attribute = ForgeRegistries.ATTRIBUTES.getValue(attributeRL);
+                if(AdvancedARPGAttributesRegistry.get(attributeRL).isInheritingBase() && attribute != null) {
+                    add += (float) livingEntity.getAttribute(attribute).getBaseValue();
+                }
+                else {
+                    add += AdvancedARPGAttributesRegistry.get(attributeRL).getBaseValue();
+                }
                 
-                for(var modifier : statContainer.getAddedModifiers().get(attributeId)) {
+                for(var modifier : statContainer.getAddedModifiers().get(attributeRL)) {
                     assert modifier != null;
                     float amount = (float) modifier.getAmount();
                     add += amount;
@@ -186,7 +224,7 @@ public class AdvancedARPGAttributesAPI {
             }
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.INCREASED)) {
-                for(var modifier : statContainer.getIncreaseModifiers().get(attributeId)) {
+                for(var modifier : statContainer.getIncreaseModifiers().get(attributeRL)) {
                     assert modifier != null;
                     float amount = (float) modifier.getAmount();
                     increase += amount;
@@ -194,7 +232,7 @@ public class AdvancedARPGAttributesAPI {
             }
 
             if(allowedMods.contains(AdvancedARPGAttribute.ModifierType.MORE)) {
-                for(var modifier : statContainer.getMoreModifiers().get(attributeId)) {
+                for(var modifier : statContainer.getMoreModifiers().get(attributeRL)) {
                     assert modifier != null;
                     float amount = (float) modifier.getAmount();
                     more *= (1 + amount);
@@ -228,6 +266,33 @@ public class AdvancedARPGAttributesAPI {
         return filtered;
     }
 
+    public static ResourceLocation getClosestMatchingAttribute(Set<String> tags) {
+
+        //worst case scenario:
+        if(tags.isEmpty()) return null;
+
+        //ideally, attribute is found that matches all the tags on first iteration.
+        List<ResourceLocation> ret = new ArrayList<>();
+
+        for(AdvancedARPGAttribute attribute : AdvancedARPGAttributesAPI.getRegistry().values()) {
+            if(attribute.getTags().containsAll(tags)) ret.add(attribute.getRl());
+        }
+
+        if(!ret.isEmpty()) return ret.get(0);
+        else {
+            //otherwise, we split the lists smaller, and do it again
+
+                //backup
+            var setToList = tags.stream().toList();
+            for(int i = 0; i < setToList.size(); i++) {
+                var newList = new ArrayList<>(setToList);
+                newList.remove(i);
+                return getClosestMatchingAttribute(new HashSet<>(newList));
+            }
+            return null;
+        }
+    }
+
     //forgot to mention this
     /**
      Takes two StatContainers, and a Hashmap where the keys are the tags to replace, and the values are the new replacements.
@@ -257,87 +322,67 @@ public class AdvancedARPGAttributesAPI {
             resultStatContainer.addModifier(modifier, attributeId);
         }
 
-        ///moving on to StatContainer b
-        for(var entry : tagToReplaceToNewReplacementTagMap.entrySet()) {
-            var attributeTagToReplace = entry.getKey();
-            var replacement = entry.getValue();
+        AdvancedARPGAttributesMod.LOGGER.info("stat container a");
+        logDataFromStatContainer(a);
+        AdvancedARPGAttributesMod.LOGGER.info("stat container b");
+        logDataFromStatContainer(b);
 
-            for(var addedEntry : b.getAddedModifiers().entries()) {
-                var attributeRL = addedEntry.getKey();
-                var modifier = addedEntry.getValue();
+        ///moving on to adding data from StatContainer b
+        //need to get the tags from stat container b and replace the tags all at once with the replacement
+        convertModifiersAndAdd(resultStatContainer, b.getAddedModifiers(), tagToReplaceToNewReplacementTagMap);
+        convertModifiersAndAdd(resultStatContainer, b.getIncreaseModifiers(), tagToReplaceToNewReplacementTagMap);
+        convertModifiersAndAdd(resultStatContainer, b.getMoreModifiers(), tagToReplaceToNewReplacementTagMap);
 
-                var advancedAPGAttribute = AdvancedARPGAttributesRegistry.get(attributeRL);
-                if(advancedAPGAttribute == null) continue;
-
-                if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
-
-                var newTags = new HashSet<>(advancedAPGAttribute.getTags());
-                newTags.remove(attributeTagToReplace);
-                newTags.add(replacement);
-
-                var replacementAttributeRL = (ResourceLocation) AdvancedARPGAttributesAPI.getFilteredAttributes(newTags).toArray()[0];
-                var replacementAttributeId = replacementAttributeRL.toString();
-
-                resultStatContainer.addModifier(modifier, replacementAttributeId);
-
-            }
-
-            for(var increasedEntry : b.getIncreaseModifiers().entries()) {
-                var attributeRL = increasedEntry.getKey();
-                var modifier = increasedEntry.getValue();
-
-                var advancedAPGAttribute = AdvancedARPGAttributesRegistry.get(attributeRL);
-                if(advancedAPGAttribute == null) continue;
-
-                if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
-
-                var newTags = new HashSet<>(advancedAPGAttribute.getTags());
-                newTags.remove(attributeTagToReplace);
-                newTags.add(replacement);
-
-                var replacementAttributeRL = (ResourceLocation) AdvancedARPGAttributesAPI.getFilteredAttributes(newTags).toArray()[0];
-                var replacementAttributeId = replacementAttributeRL.toString();
-
-                resultStatContainer.addModifier(modifier, replacementAttributeId);
-
-            }
-
-            for(var moreEntry : b.getMoreModifiers().entries()) {
-                var attributeRL = moreEntry.getKey();
-                var modifier = moreEntry.getValue();
-
-                var advancedAPGAttribute = AdvancedARPGAttributesRegistry.get(attributeRL);
-                if(advancedAPGAttribute == null) continue;
-
-                if(!advancedAPGAttribute.getTags().contains(attributeTagToReplace)) continue;
-
-                var newTags = new HashSet<>(advancedAPGAttribute.getTags());
-                newTags.remove(attributeTagToReplace);
-                newTags.add(replacement);
-
-                var replacementAttributeRL = (ResourceLocation) AdvancedARPGAttributesAPI.getFilteredAttributes(newTags).toArray()[0];
-                var replacementAttributeId = replacementAttributeRL.toString();
-
-                resultStatContainer.addModifier(modifier, replacementAttributeId);
-
-            }
-
-        }
-
+        AdvancedARPGAttributesMod.LOGGER.info("resultant stat container");
         logDataFromStatContainer(resultStatContainer);
 
         return resultStatContainer;
     }
 
+    public static void convertModifiersAndAdd(StatContainer resultStatContainer, Multimap<ResourceLocation, AttributeModifier> multimap, HashMap<String, String> tagToReplaceToNewReplacementTagMap) {
+        for(var addedEntry : multimap.entries()) {
+            var rl = addedEntry.getKey();
+            var am = addedEntry.getValue();
+
+            var aaattribute = AdvancedARPGAttributesAPI.getRegistry().get(rl);
+            if(aaattribute == null) continue;
+
+            //replacement
+            var newMutableTags = new HashSet<>(aaattribute.getTags());
+            for(var entry : tagToReplaceToNewReplacementTagMap.entrySet()) {
+
+                var tagToReplace = entry.getKey();
+                var replacement = entry.getValue();
+
+                if(newMutableTags.contains(tagToReplace)) {
+                    newMutableTags.remove(tagToReplace);
+                    newMutableTags.add(replacement);
+                }
+            }
+
+            var replaceAttributesRLs = AdvancedARPGAttributesAPI.getFilteredAttributes(newMutableTags);
+            AdvancedARPGAttributesMod.LOGGER.info("potential attribute replacements: " + replaceAttributesRLs);
+            var replacementAttributeRL = getClosestMatchingAttribute(newMutableTags);
+
+            if(replacementAttributeRL != null) {
+                var replacementAttributeId = replacementAttributeRL.toString();
+                resultStatContainer.addModifier(am, replacementAttributeId);
+            }
+        }
+    }
+
     public static void logDataFromStatContainer(StatContainer statContainer) {
+        AdvancedARPGAttributesMod.LOGGER.info("added modifiers");
         for(var key : statContainer.getAddedModifiers().keySet()) {
             AdvancedARPGAttributesMod.LOGGER.info(key + " "  + statContainer.getAddedModifiers().get(key).toString());
         }
 
+        AdvancedARPGAttributesMod.LOGGER.info("increases");
         for(var key : statContainer.getIncreaseModifiers().keySet()) {
             AdvancedARPGAttributesMod.LOGGER.info(key + " " + statContainer.getIncreaseModifiers().get(key).toString());
         }
 
+        AdvancedARPGAttributesMod.LOGGER.info("more's");
         for(var key : statContainer.getMoreModifiers().keySet()) {
             AdvancedARPGAttributesMod.LOGGER.info(key + " " + statContainer.getMoreModifiers().get(key).toString());
         }

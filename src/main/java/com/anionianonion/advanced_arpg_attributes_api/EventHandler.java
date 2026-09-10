@@ -86,6 +86,11 @@ public class EventHandler {
                 theoreticalPlayerCount *= 2;
                 fullCycleLength *= 2;
             }
+            //when players leave, we must also make it smaller so updates get triggered faster.
+            while(players.size() < theoreticalPlayerCount / 2) {
+                theoreticalPlayerCount /= 2;
+                fullCycleLength /= 2;
+            }
 
             playerInterval = fullCycleLength / players.size();
         }

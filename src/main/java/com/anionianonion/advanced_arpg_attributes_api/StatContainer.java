@@ -12,6 +12,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
@@ -96,10 +97,10 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
         multimap.remove(rl, attributeModifier);
     }
 
-    public void readdModifiersFromPlayer(ServerPlayer player) {
+    public void readdModifiersFromPlayer(LivingEntity livingEntity) {
 
         //the only way to get all player attributes from the player, which is saved as a tag
-        var attributesTag = player.getAttributes().save();
+        var attributesTag = livingEntity.getAttributes().save();
 
         //add all modifiers on the player, by looping through the attribute tags on the player (which is only associated with the base value and the name of the attribute inside the Player's NBT)
         for(Tag attributeTag : attributesTag) {
@@ -118,7 +119,7 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
             if(attribute == null) continue;
 
             //grab the modifiers the player have for that attribute and store them inside the stat container.
-            var modifiers = Objects.requireNonNull(player.getAttribute(attribute)).getModifiers();
+            var modifiers = Objects.requireNonNull(livingEntity.getAttribute(attribute)).getModifiers();
             for(var modifier : modifiers) {
                 this.addModifier(modifier, attributeId);
             }

@@ -12,6 +12,7 @@ public class AdvancedARPGAttribute {
     private Set<ModifierType> allowedModifierTypes;
     private Set<String> tags;
     private float baseValue;
+    private boolean inheritBase = false;
 
     /**
      Constructor which specifies name, and customizing allowedModifier types, as well as automatic registration.
@@ -67,5 +68,13 @@ public class AdvancedARPGAttribute {
 
     public void setBaseValue(Supplier<Float> baseValueSupplier) {
         this.baseValue = baseValueSupplier.get();
+    }
+
+    public boolean isInheritingBase() {
+        return this.inheritBase;
+    }
+
+    public void setInheritBase(boolean b) {
+        this.inheritBase = b;
     }
 }
