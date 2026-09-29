@@ -1,8 +1,10 @@
 package com.anionianonion.advanced_arpg_attributes_api;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class AdvancedARPGAttribute {
@@ -13,6 +15,10 @@ public class AdvancedARPGAttribute {
     private Set<String> tags;
     private float baseValue;
     private boolean inheritBase = false;
+
+    private UUID uuidForAddModifier;
+    private UUID uuidForIncreaseModifier;
+    private UUID uuidForMoreModifier;
 
     /**
      Constructor which specifies name, and customizing allowedModifier types, as well as automatic registration.
@@ -77,4 +83,32 @@ public class AdvancedARPGAttribute {
     public void setInheritBase(boolean b) {
         this.inheritBase = b;
     }
+
+    public UUID getUuidForAddModifier() {
+        return this.uuidForAddModifier;
+    }
+    public void setUuidForAddModifier(UUID uuidForAddModifier) {
+        this.uuidForAddModifier = uuidForAddModifier;
+    }
+    public UUID getUuidForIncreaseModifier() {
+        return uuidForIncreaseModifier;
+    }
+    public void setUuidForIncreaseModifier(UUID uuidForIncreaseModifier) {
+        this.uuidForIncreaseModifier = uuidForIncreaseModifier;
+    }
+    public UUID getUuidForMoreModifier() {
+        return this.uuidForMoreModifier;
+    }
+    public void setUuidForMoreModifier(UUID uuidForMoreModifier) {
+        this.uuidForMoreModifier = uuidForMoreModifier;
+    }
+
+    public UUID getUUID(AttributeModifier.Operation operation) {
+        return switch (operation) {
+            case ADDITION -> this.uuidForAddModifier;
+            case MULTIPLY_BASE -> this.uuidForIncreaseModifier;
+            case MULTIPLY_TOTAL -> this.uuidForMoreModifier;
+        };
+    }
+
 }

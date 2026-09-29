@@ -4,13 +4,14 @@ import com.anionianonion.advanced_arpg_attributes_api.capability.StatContainerCa
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.*;
 
-import static com.anionianonion.advanced_arpg_attributes_api.StatContainer.updateAdvancedARPGAttributeModifiers;
+import static com.anionianonion.advanced_arpg_attributes_api.StatContainer.updateStatContainer;
 
 
 @Mod.EventBusSubscriber(modid = AdvancedARPGAttributesMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -60,7 +61,7 @@ public class EventHandler {
 
             //do stuff to player
             var player = players.get(index);
-            updateAdvancedARPGAttributeModifiers(player);
+            updateStatContainer(player);
 
             //tell it to move to next player.
             index++;
@@ -97,6 +98,19 @@ public class EventHandler {
 
     }
 
+    public static int counter = 1;
+
+    @SubscribeEvent
+    public static void onLivingEntityTick(LivingEvent.LivingTickEvent e) {
+        if(e.getEntity() instanceof ServerPlayer) return;
+
+        counter++;
+        if(counter == 20) {
+            updateStatContainer(e.getEntity());
+            counter = 0;
+        }
+    }
+
     private static void info(String message) {
         AdvancedARPGAttributesMod.LOGGER.info(message);
     }
@@ -116,11 +130,10 @@ public class EventHandler {
         oldPlayer.getCapability(StatContainerCapability.INSTANCE).ifPresent(oldStatContainer -> {
             respawnedPlayer.getCapability(StatContainerCapability.INSTANCE).ifPresent(newStatContainer -> {
 
-                //todo: fix statContainer being removed and not being renewed on death
                 newStatContainer.setAddedModifiers(oldStatContainer.getAddedModifiers());
                 newStatContainer.setIncreaseModifiers(oldStatContainer.getIncreaseModifiers());
                 newStatContainer.setMoreModifiers(oldStatContainer.getMoreModifiers());
-                newStatContainer.attributeCaps = oldStatContainer.attributeCaps;
+                newStatContainer.setAttributeCaps(oldStatContainer.getAttributeCaps());
             });
         });
         oldPlayer.invalidateCaps();

@@ -1,6 +1,7 @@
 package com.anionianonion.advanced_arpg_attributes_api;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.player.Player;
 
@@ -11,7 +12,7 @@ import java.util.function.BiConsumer;
 public class AdvancedARPGAttributesRegistry {
 
     private static final HashMap<ResourceLocation, AdvancedARPGAttribute> advancedAttributesRegistry = new HashMap<>();
-    private static final HashMap<Attribute, BiConsumer<Player, Float>> attributeCapFunctions = new HashMap<>();
+    private static final HashMap<Attribute, BiConsumer<LivingEntity, Float>> attributeCapFunctions = new HashMap<>();
 
     public static void regAttribute(ResourceLocation rl, Set<AdvancedARPGAttribute.ModifierType> allowedModifierTypes, Set<String> tags) {
         if(!advancedAttributesRegistry.containsKey(rl)) advancedAttributesRegistry.put(rl, new AdvancedARPGAttribute(rl, allowedModifierTypes, tags));
@@ -28,8 +29,13 @@ public class AdvancedARPGAttributesRegistry {
     public static AdvancedARPGAttribute get(ResourceLocation id) {
         return advancedAttributesRegistry.get(id);
     }
+    public static AdvancedARPGAttribute get(String id) {
+        ResourceLocation rl = ResourceLocation.tryParse(id);
+        return advancedAttributesRegistry.get(rl);
+    }
 
-    public static HashMap<Attribute, BiConsumer<Player, Float>> getAttributeCapFunctions() {
+
+    public static HashMap<Attribute, BiConsumer<LivingEntity, Float>> getAttributeCapFunctions() {
         return attributeCapFunctions;
     }
 }

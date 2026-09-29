@@ -11,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -25,23 +24,32 @@ public class AdvancedARPGAttributesAPI {
     private static final HashMap<Class<? extends Item>, String> classesOfValidMeleeWeaponItemClassesToWeaponTags = new HashMap<>();
     private static final HashMap<Class<? extends Item>, String> classesOfValidRangedWeaponItemClassesToWeaponTags = new HashMap<>();
 
-    public static void registerTag(String newTag) {
-        if(newTag != null) validTags.add(newTag);
-    }
-
+    //registry getters
     public static Set<String> getValidTags() {
         return validTags;
     }
-
-    public static Set<String> getValidWeapons() {
-        var meleeWeapons = classesOfValidMeleeWeaponItemClassesToWeaponTags
-                .values()
+    public AdvancedARPGAttribute getAttribute(ResourceLocation resourceLocation) {
+        return AdvancedARPGAttributesRegistry.get(resourceLocation);
+    }
+    public AdvancedARPGAttribute getAttribute(String id) {
+        return AdvancedARPGAttributesRegistry.get(id);
+    }
+    public static HashMap<ResourceLocation, AdvancedARPGAttribute> getRegistry() {
+        return AdvancedARPGAttributesRegistry.get();
+    }
+    public static HashMap<Class<? extends Item>, String> getClassesOfMeleeWeaponItemsToTag() {
+        return classesOfValidMeleeWeaponItemClassesToWeaponTags;
+    }
+    public static HashMap<Class<? extends Item>, String> getClassesOfRangedWeaponItemsToTag() {
+        return classesOfValidRangedWeaponItemClassesToWeaponTags;
+    }
+    public static Set<String> getValidWeaponTags() {
+        var meleeWeapons = classesOfValidMeleeWeaponItemClassesToWeaponTags.values()
                 .stream()
                 .filter(tag -> !tag.isEmpty())
                 .collect(Collectors.toSet());
 
-        var rangedWeapons = classesOfValidRangedWeaponItemClassesToWeaponTags.
-                values().
+        var rangedWeapons = classesOfValidRangedWeaponItemClassesToWeaponTags.values().
                 stream()
                 .filter(tag -> !tag.isEmpty())
                 .collect(Collectors.toSet());
@@ -60,38 +68,24 @@ public class AdvancedARPGAttributesAPI {
         }
     }
 
+    public static void registerTag(String newTag) {
+        if(newTag != null) validTags.add(newTag);
+    }
     public static void regAttribute(ResourceLocation rl, Set<AdvancedARPGAttribute.ModifierType> allowedModifierTypes, Set<String> tags) {
         AdvancedARPGAttributesRegistry.regAttribute(rl, allowedModifierTypes, tags);
     }
-
     public static void regAttribute(ResourceLocation rl, Set<String> tags) {
         AdvancedARPGAttributesRegistry.regAttribute(rl, tags);
     }
-
-    public static HashMap<ResourceLocation, AdvancedARPGAttribute> getRegistry() {
-        return AdvancedARPGAttributesRegistry.get();
-    }
-
-    public static void addPlayerExecutedFunctionToAttribute(Attribute a, BiConsumer<Player, Float> function) {
-        AdvancedARPGAttributesRegistry.getAttributeCapFunctions().put(a, function);
-    }
-
     public static void registerMeleeWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
         classesOfValidMeleeWeaponItemClassesToWeaponTags.put(itemClass, tag);
     }
-
-    public static HashMap<Class<? extends Item>, String> getClassesOfMeleeWeaponItemsToTag() {
-        return classesOfValidMeleeWeaponItemClassesToWeaponTags;
-    }
-
     public static void registerRangedWeaponClassAndTag(Class<? extends Item> itemClass, String tag) {
         classesOfValidRangedWeaponItemClassesToWeaponTags.put(itemClass, tag);
     }
-
-    public static HashMap<Class<? extends Item>, String> getClassesOfRangedWeaponItemsToTag() {
-        return classesOfValidRangedWeaponItemClassesToWeaponTags;
+    public static void addPlayerExecutedFunctionToAttribute(Attribute a, BiConsumer<LivingEntity, Float> function) {
+        AdvancedARPGAttributesRegistry.getAttributeCapFunctions().put(a, function);
     }
-
 
     public static float getResult(LivingEntity livingEntity, Set<ResourceLocation> filteredAttributeRLs) {
         float add = 0;
@@ -141,7 +135,6 @@ public class AdvancedARPGAttributesAPI {
         return add * (1 + increase) * more;
 
     }
-
     public static float getResultOfSingleAttribute(LivingEntity livingEntity, ResourceLocation attributeRL) {
         float add = 0;
         float increase = 0;
@@ -187,7 +180,6 @@ public class AdvancedARPGAttributesAPI {
         if(cap == null) return result;
         return Math.min(result, cap);
     }
-
     public static float[] getData(LivingEntity livingEntity, Set<ResourceLocation> filteredAttributeRLs) {
         float[] data = new float[3];
 
@@ -247,11 +239,10 @@ public class AdvancedARPGAttributesAPI {
 
     }
 
-    public static Set<ResourceLocation> getFilteredAttributes(String... tags) {
-        return getFilteredAttributes(Set.of(tags));
+    public static Set<ResourceLocation> getFilteredAttributesResourceLocations(String... tags) {
+        return getFilteredAttributesResourceLocations(Set.of(tags));
     }
-
-    public static Set<ResourceLocation> getFilteredAttributes(Set<String> tags) {
+    public static Set<ResourceLocation> getFilteredAttributesResourceLocations(Set<String> tags) {
         var attributeEntries = AdvancedARPGAttributesRegistry.get().entrySet();
         Set<ResourceLocation> filtered = new HashSet<>();
 
@@ -262,6 +253,22 @@ public class AdvancedARPGAttributesAPI {
 
             //required tags is a subset of tags on an attribute that tags must have in order for that attribute to be considered using.
             if(tags.containsAll(requiredTags)) filtered.add(attributeKey);
+        }
+        return filtered;
+    }
+    public static Set<AdvancedARPGAttribute> getFilteredAttributes(String... tags) {
+        return getFilteredAttributes(Set.of(tags));
+    }
+    public static Set<AdvancedARPGAttribute> getFilteredAttributes(Set<String> tags) {
+        var attributeEntries = AdvancedARPGAttributesRegistry.get().entrySet();
+        Set<AdvancedARPGAttribute> filtered = new HashSet<>();
+
+        for(var attributeEntry : attributeEntries) {
+            var attribute = attributeEntry.getValue();
+            var requiredTags = attribute.getTags();
+
+            //required tags is a subset of tags on an attribute that tags must have in order for that attribute to be considered using.
+            if(tags.containsAll(requiredTags)) filtered.add(attribute);
         }
         return filtered;
     }
@@ -360,7 +367,7 @@ public class AdvancedARPGAttributesAPI {
                 }
             }
 
-            var replaceAttributesRLs = AdvancedARPGAttributesAPI.getFilteredAttributes(newMutableTags);
+            var replaceAttributesRLs = AdvancedARPGAttributesAPI.getFilteredAttributesResourceLocations(newMutableTags);
             AdvancedARPGAttributesMod.LOGGER.info("potential attribute replacements: " + replaceAttributesRLs);
             var replacementAttributeRL = getClosestMatchingAttribute(newMutableTags);
 

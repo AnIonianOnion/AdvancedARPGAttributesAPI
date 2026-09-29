@@ -11,11 +11,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -29,6 +27,10 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
     private Multimap<ResourceLocation, AttributeModifier> addedModifiers = ArrayListMultimap.create();
     private Multimap<ResourceLocation, AttributeModifier> increaseModifiers = ArrayListMultimap.create();
     private Multimap<ResourceLocation, AttributeModifier> moreModifiers = ArrayListMultimap.create();
+    private HashMap<ResourceLocation, Float> attributeCaps = new HashMap<>();
+
+    private boolean isDirty = true; //if this is false, on world load, updateStatContainer won't finish running to update the livingEntity's statContainer.
+
 
     public Multimap<ResourceLocation, AttributeModifier> getAddedModifiers() {
         return addedModifiers;
@@ -49,8 +51,13 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
         this.moreModifiers = moreModifiers;
     }
 
-    //todo: remember to properly serialize/deserialize
-    public HashMap<ResourceLocation, Float> attributeCaps = new HashMap<>();
+
+    public boolean isDirty() {
+        return this.isDirty;
+    }
+    public void setDirty(boolean dirty) {
+        this.isDirty = dirty;
+    }
 
     /**
      *
@@ -81,9 +88,11 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
             case MULTIPLY_TOTAL -> moreModifiers;
         };
 
-        if(!multimap.containsValue(attributeModifier)) multimap.put(rl, attributeModifier);
+        if(!multimap.containsValue(attributeModifier)) {
+            multimap.put(rl, attributeModifier);
+            this.isDirty = true;
+        }
     }
-
     public void removeModifier(AttributeModifier attributeModifier, String attributeId) {
         ResourceLocation rl = ResourceLocation.tryParse(attributeId);
         if(rl == null) return;
@@ -125,8 +134,7 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
             }
         }
     }
-
-    public void clearModifiersForRecalculation() {
+    public void clearModifiers() {
 
         this.addedModifiers.clear();
         this.increaseModifiers.clear();
@@ -149,7 +157,6 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
         }
         attributeCaps.put(rl, amount);
     }
-
     public Float getLockedAttributeValue(String attributeId) {
         AdvancedARPGAttribute attribute = RandomHelpers.getValidAAAttribute(attributeId);
         if(attribute == null) return null;
@@ -157,12 +164,10 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
         ResourceLocation rl = RandomHelpers.getResourceLocationOfValidAAAttribute(attribute);
         return getLockedAttributeValue(rl);
     }
-
     public Float getLockedAttributeValue(ResourceLocation rl) {
         if(rl == null) return null;
         return attributeCaps.get(rl);
     }
-
     public void unlockAttribute(String attributeId) {
         AdvancedARPGAttribute attribute = RandomHelpers.getValidAAAttribute(attributeId);
         if(attribute == null) return;
@@ -178,29 +183,15 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
         attributeCaps.remove(rl);
     }
 
+    public HashMap<ResourceLocation, Float> getAttributeCaps() {
+        return this.attributeCaps;
+    }
+
+    public void setAttributeCaps(HashMap<ResourceLocation, Float> attributeCaps) {
+        this.attributeCaps = attributeCaps;
+    }
+
     /// Serialization/Deserialization
-    @Override
-    public CompoundTag serializeNBT() {
-        //root of data
-        CompoundTag statContainerTag = new CompoundTag();
-
-        //there should be an UUId of that item attached to the item already
-        statContainerTag.put("addedModifiers", serializeModifierMap(addedModifiers));
-        statContainerTag.put("increaseModifiers", serializeModifierMap(increaseModifiers));
-        statContainerTag.put("moreModifiers", serializeModifierMap(moreModifiers));
-        statContainerTag.put("attributeCaps", serializeAttributeCaps());
-
-        return statContainerTag;
-    }
-    @Override
-    public void deserializeNBT(CompoundTag nbt) {
-
-        deserializeModifierMap(nbt.getCompound("addedModifiers"), addedModifiers);
-        deserializeModifierMap(nbt.getCompound("increaseModifiers"), increaseModifiers);
-        deserializeModifierMap(nbt.getCompound("moreModifiers"), moreModifiers);
-        deserializeAttributeCaps(nbt.getCompound("attributeCaps"));
-    }
-
     private CompoundTag serializeModifierMap(Multimap<ResourceLocation, AttributeModifier> attributesAndModifiers) {
 
         CompoundTag attributesAndModifiersTag = new CompoundTag();
@@ -251,7 +242,6 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
             }
         }
     }
-
     private CompoundTag serializeAttributeCaps() {
 
         CompoundTag attributeCapsTag = new CompoundTag();
@@ -270,41 +260,62 @@ public class StatContainer implements INBTSerializable<CompoundTag> {
         }
     }
 
-    /// static methods
-    public static void updateAdvancedARPGAttributeModifiers(ServerPlayer player) {
-        player.getCapability(StatContainerCapability.INSTANCE).ifPresent(statContainerCapability -> {
-            //recalculate from a blank slate
-            statContainerCapability.clearModifiersForRecalculation();
-            statContainerCapability.readdModifiersFromPlayer(player);
+    @Override
+    public CompoundTag serializeNBT() {
+        //root of data
+        CompoundTag statContainerTag = new CompoundTag();
 
-            //we want to set player's attributes to their limits based on the individual player's attribute caps.
-            var attributeCaps = statContainerCapability.attributeCaps;
+        //there should be an UUId of that item attached to the item already
+        statContainerTag.put("addedModifiers", serializeModifierMap(addedModifiers));
+        statContainerTag.put("increaseModifiers", serializeModifierMap(increaseModifiers));
+        statContainerTag.put("moreModifiers", serializeModifierMap(moreModifiers));
+        statContainerTag.put("attributeCaps", serializeAttributeCaps());
 
-            //
-            applyAttributeLocks(player, attributeCaps);
+        return statContainerTag;
+    }
+    @Override
+    public void deserializeNBT(CompoundTag nbt) {
 
-
-        });
+        deserializeModifierMap(nbt.getCompound("addedModifiers"), addedModifiers);
+        deserializeModifierMap(nbt.getCompound("increaseModifiers"), increaseModifiers);
+        deserializeModifierMap(nbt.getCompound("moreModifiers"), moreModifiers);
+        deserializeAttributeCaps(nbt.getCompound("attributeCaps"));
     }
 
+    /// static methods
+    public static void updateStatContainer(LivingEntity livingEntity) {
+
+        var statContainer = livingEntity.getCapability(StatContainerCapability.INSTANCE).resolve().orElse(null);
+        if(statContainer == null || !statContainer.isDirty) return;
+
+        //recalculate from a blank slate
+        statContainer.clearModifiers();
+        statContainer.readdModifiersFromPlayer(livingEntity);
+
+        //we want to set player's attributes to their limits based on the individual player's attribute caps.
+        var attributeCaps = statContainer.attributeCaps;
+        applyAttributeLocks(livingEntity, attributeCaps);
+
+        statContainer.isDirty = false;
+    }
     /**
      * This method loops through the resource-location-to-locked-attribute-value map, and "locks" all the player's attributes at those values,
      * by setting the base value of each attribute to that value, and removing all other modifiers. It also applies special functions if the attribute for the resource location that exists in attributeCaps also exists in attributeCapFunctions.
      * *Related*: For special functionalities, like locking a player's health at 1 hp, you must use <code>AdvancedARPGAttributesAPI.addPlayerExecutedFunctionToAttribute</code>
      *  For example: <code>AdvancedARPGAttributesAPI.addPlayerExecutedFunctionToAttribute(Attributes.MAX_HEALTH, (player, lockedValue) -> { if(player.isAlive()) { player.setHealth(lockedValue); }})</code>
      */
-    public static void applyAttributeLocks(ServerPlayer player, HashMap<ResourceLocation, Float> attributeCaps) {
+    public static void applyAttributeLocks(LivingEntity livingEntity, HashMap<ResourceLocation, Float> attributeCaps) {
         for(var attributeCap : attributeCaps.entrySet()) {
             var attributeKey = attributeCap.getKey();
             Attribute a = ForgeRegistries.ATTRIBUTES.getValue(attributeKey);
             if(a == null) continue;
 
-            Objects.requireNonNull(player.getAttribute(a)).removeModifiers();
-            Objects.requireNonNull(player.getAttribute(a)).setBaseValue(attributeCap.getValue());
+            Objects.requireNonNull(livingEntity.getAttribute(a)).removeModifiers();
+            Objects.requireNonNull(livingEntity.getAttribute(a)).setBaseValue(attributeCap.getValue());
 
             if(AdvancedARPGAttributesRegistry.getAttributeCapFunctions().containsKey(a)) {
-                BiConsumer<Player, Float> function = AdvancedARPGAttributesRegistry.getAttributeCapFunctions().get(a);
-                function.accept(player, attributeCap.getValue());
+                BiConsumer<LivingEntity, Float> function = AdvancedARPGAttributesRegistry.getAttributeCapFunctions().get(a);
+                function.accept(livingEntity, attributeCap.getValue());
             }
         }
     }
