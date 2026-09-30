@@ -4,7 +4,9 @@ import com.anionianonion.advanced_arpg_attributes_api.capability.StatContainerCa
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingSwapItemsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -100,10 +102,12 @@ public class EventHandler {
 
     public static int counter = 1;
 
+    //thought this was breaking stuff, but it was because dirty flag is false, and we never set it back to true when equipment change
     @SubscribeEvent
     public static void onLivingEntityTick(LivingEvent.LivingTickEvent e) {
         if(e.getEntity() instanceof ServerPlayer) return;
 
+        //automatically updates other entities' stat containers once a second
         counter++;
         if(counter == 20) {
             updateStatContainer(e.getEntity());
@@ -137,5 +141,14 @@ public class EventHandler {
             });
         });
         oldPlayer.invalidateCaps();
+    }
+
+    //this marks the dirty flag dirty, which allows the stat container to update.
+    @SubscribeEvent
+    public static void itemChanged(LivingEquipmentChangeEvent e) {
+        var statContainer = e.getEntity().getCapability(StatContainerCapability.INSTANCE).resolve().orElse(null);
+        if(statContainer == null) return;
+
+        statContainer.setDirty(true);
     }
 }
